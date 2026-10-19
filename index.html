@@ -20,6 +20,56 @@
       </header>
 
       <section class="game-panel" aria-label="지뢰찾기 게임">
+        <div class="settings">
+          <label for="difficulty">난이도</label>
+          <select id="difficulty">
+            <option value="basic">기본 · 10×10, 지뢰 10개</option>
+            <option value="beginner">초급 · 9×9, 지뢰 10개</option>
+            <option value="intermediate">중급 · 16×16, 지뢰 40개</option>
+            <option value="advanced">상급 · 16×30, 지뢰 99개</option>
+            <option value="custom">사용자 지정</option>
+          </select>
+          <form class="custom-settings" id="custom-settings" hidden novalidate>
+            <label>
+              행
+              <input
+                id="custom-rows"
+                type="number"
+                min="5"
+                max="30"
+                step="1"
+                value="10"
+                required
+              />
+            </label>
+            <label>
+              열
+              <input
+                id="custom-cols"
+                type="number"
+                min="5"
+                max="30"
+                step="1"
+                value="10"
+                required
+              />
+            </label>
+            <label>
+              지뢰
+              <input
+                id="custom-mines"
+                type="number"
+                min="1"
+                max="899"
+                step="1"
+                value="10"
+                required
+              />
+            </label>
+            <button class="apply-settings" type="submit">적용</button>
+          </form>
+        </div>
+
         <div class="status-bar">
           <div class="counter" aria-label="남은 지뢰 수">
             <span class="counter-icon" aria-hidden="true">🚩</span>
@@ -42,12 +92,14 @@
           </div>
         </div>
 
-        <div
-          class="board"
-          id="board"
-          role="grid"
-          aria-label="10행 10열 지뢰찾기 보드"
-        ></div>
+        <div class="board-viewport">
+          <div
+            class="board"
+            id="board"
+            role="grid"
+            aria-label="10행 10열 지뢰찾기 보드"
+          ></div>
+        </div>
 
         <p class="game-message" id="message" role="status" aria-live="polite">
           지뢰를 조심하세요!

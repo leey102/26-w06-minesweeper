@@ -1,12 +1,25 @@
-const ROWS = 10;
-const COLS = 10;
-const MINE_TOTAL = 10;
+let rows = 10;
+let cols = 10;
+let mineTotal = 10;
 
 const boardElement = document.querySelector("#board");
+const boardViewportElement = document.querySelector(".board-viewport");
 const mineCountElement = document.querySelector("#mine-count");
 const timerElement = document.querySelector("#timer");
 const messageElement = document.querySelector("#message");
 const restartButton = document.querySelector("#restart");
+const difficultyElement = document.querySelector("#difficulty");
+const customSettingsElement = document.querySelector("#custom-settings");
+const customRowsElement = document.querySelector("#custom-rows");
+const customColsElement = document.querySelector("#custom-cols");
+const customMinesElement = document.querySelector("#custom-mines");
+
+const difficultySettings = {
+  basic: { rows: 10, cols: 10, mines: 10 },
+  beginner: { rows: 9, cols: 9, mines: 10 },
+  intermediate: { rows: 16, cols: 16, mines: 40 },
+  advanced: { rows: 16, cols: 30, mines: 99 },
+};
 
 let cells = [];
 let flags = 0;
@@ -16,7 +29,7 @@ let gameStarted = false;
 let gameOver = false;
 
 function createBoard() {
-  cells = Array.from({ length: ROWS * COLS }, (_, index) => ({
+  cells = Array.from({ length: rows * cols }, (_, index) => ({
     index,
     mine: false,
     adjacentMines: 0,
@@ -26,6 +39,9 @@ function createBoard() {
   }));
 
   boardElement.replaceChildren();
+  boardElement.style.setProperty("--columns", cols);
+  boardElement.setAttribute("aria-label", `${rows}행 ${cols}열 지뢰찾기 보드`);
+  updateBoardCellSize();
   cells.forEach((cell) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -56,12 +72,31 @@ function createBoard() {
   updateMineCount();
 }
 
+function updateBoardCellSize() {
+  const boardStyle = window.getComputedStyle(boardElement);
+  const horizontalPadding =
+    Number.parseFloat(boardStyle.paddingLeft) +
+    Number.parseFloat(boardStyle.paddingRight) +
+    Number.parseFloat(boardStyle.borderLeftWidth) +
+    Number.parseFloat(boardStyle.borderRightWidth);
+  const columnGap = Number.parseFloat(boardStyle.columnGap);
+  const availableCellWidth =
+    boardViewportElement.clientWidth -
+    horizontalPadding -
+    columnGap * (cols - 1);
+  const cellSize = Math.max(
+    22,
+    Math.min(44, Math.floor(availableCellWidth / cols)),
+  );
+  boardElement.style.setProperty("--cell-size", `${cellSize}px`);
+}
+
 function rowOf(index) {
-  return Math.floor(index / COLS);
+  return Math.floor(index / cols);
 }
 
 function colOf(index) {
-  return index % COLS;
+  return index % cols;
 }
 
 function neighborsOf(index) {
@@ -76,13 +111,13 @@ function neighborsOf(index) {
       const neighborCol = col + colOffset;
       if (
         neighborRow < 0 ||
-        neighborRow >= ROWS ||
+        neighborRow >= rows ||
         neighborCol < 0 ||
-        neighborCol >= COLS
+        neighborCol >= cols
       ) {
         continue;
       }
-      neighbors.push(neighborRow * COLS + neighborCol);
+      neighbors.push(neighborRow * cols + neighborCol);
     }
   }
   return neighbors;
@@ -98,7 +133,7 @@ function placeMines(safeIndex) {
     ];
   }
 
-  candidates.slice(0, MINE_TOTAL).forEach((cell) => {
+  candidates.slice(0, mineTotal).forEach((cell) => {
     cell.mine = true;
   });
 
@@ -220,7 +255,7 @@ function renderCell(cell) {
 }
 
 function updateMineCount() {
-  const remaining = MINE_TOTAL - flags;
+  const remaining = mineTotal - flags;
   mineCountElement.textContent =
     remaining < 0
       ? `-${String(Math.abs(remaining)).padStart(2, "0")}`
@@ -257,4 +292,77 @@ function finishGame(won) {
 }
 
 restartButton.addEventListener("click", createBoard);
+
+difficultyElement.addEventListener("change", () => {
+  const selectedDifficulty = difficultyElement.value;
+  const customSelected = selectedDifficulty === "custom";
+  customSettingsElement.hidden = !customSelected;
+
+  if (customSelected) {
+    customRowsElement.value = rows;
+    customColsElement.value = cols;
+    customMinesElement.value = mineTotal;
+    updateCustomMineLimit();
+    messageElement.textContent = "원하는 보드 크기와 지뢰 수를 입력하세요.";
+    return;
+  }
+
+  const settings = difficultySettings[selectedDifficulty];
+  if (!settings) {
+    throw new Error(`알 수 없는 난이도 설정: ${selectedDifficulty}`);
+  }
+  rows = settings.rows;
+  cols = settings.cols;
+  mineTotal = settings.mines;
+  createBoard();
+});
+
+function updateCustomMineLimit() {
+  const customRows = Number(customRowsElement.value);
+  const customCols = Number(customColsElement.value);
+  if (
+    Number.isInteger(customRows) &&
+    Number.isInteger(customCols) &&
+    customRows >= 5 &&
+    customRows <= 30 &&
+    customCols >= 5 &&
+    customCols <= 30
+  ) {
+    customMinesElement.max = String(customRows * customCols - 1);
+  }
+}
+
+customRowsElement.addEventListener("input", updateCustomMineLimit);
+customColsElement.addEventListener("input", updateCustomMineLimit);
+
+customSettingsElement.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const customRows = Number(customRowsElement.value);
+  const customCols = Number(customColsElement.value);
+  const customMines = Number(customMinesElement.value);
+
+  if (
+    !Number.isInteger(customRows) ||
+    !Number.isInteger(customCols) ||
+    !Number.isInteger(customMines) ||
+    customRows < 5 ||
+    customRows > 30 ||
+    customCols < 5 ||
+    customCols > 30 ||
+    customMines < 1 ||
+    customMines >= customRows * customCols
+  ) {
+    messageElement.textContent =
+      "행과 열은 5~30, 지뢰는 1개 이상 칸 수보다 적게 입력하세요.";
+    return;
+  }
+
+  rows = customRows;
+  cols = customCols;
+  mineTotal = customMines;
+  createBoard();
+  messageElement.textContent = `사용자 설정을 적용했어요 (${rows}×${cols}, 지뢰 ${mineTotal}개).`;
+});
+
+window.addEventListener("resize", updateBoardCellSize);
 createBoard();
